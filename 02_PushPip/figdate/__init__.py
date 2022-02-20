@@ -13,11 +13,14 @@ from optparse import OptionParser
 locale.setlocale(locale.LC_ALL, "ru_RU.UTF-8")
 
 def date(format="%Y %d %b, %A", font = "graceful"):
+    """
+    returns beautiful current date
+    """
     date = strftime(format, gmtime())
     pyfiglet.print_figlet(date, font=font)
 
 __all__ = ["date"]
-__author__ = 'Kazarinov Andrey, '
+__author__ = 'Kazarinov Andrey, kazarandrey@yandex.ru'
 
 def main():
     parser = OptionParser(usage='%prog [options]')
@@ -28,10 +31,10 @@ def main():
                       help='font to render (default: %default)',
                       metavar='FONT')
     opts, args = parser.parse_args()
-    if opts.format and opts.font:
+    if opts.format and opts.font: # all options
         date(opts.format, opts.font)
         exit(0)
-    if opts.format:
+    if opts.format: # only format options
         date(opts.font)
         exit(0)
     parser.print_help()
