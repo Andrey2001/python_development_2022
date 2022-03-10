@@ -14,52 +14,80 @@ if sys.platform.startswith('linux'):
 elif sys.platform.startswith('win'):
     import pyreadline3
 
+
+def variants_handle(args):
+    gens = get_all_generators()
+    gens = [g.__module__ + "." + g.__name__ for g in gens]
+    gens = [g[len('pynames.generators.'):] for g in gens]
+
+    if len(args) < 1 or len(args) > 2:
+        print('ERROR: Incorrect number of arguments')
+        return -1
+    else:
+        tmpstr = None
+        if len(args) == 1:
+            if args[0] == 'russian':
+                tmpstr = f'{args[0]}.PaganNamesGenerator'
+            else: 
+                tmpstr = f'{args[0]}.{args[0].title()}NamesGenerator'
+        elif len(args) > 1:
+            if args[0] == 'iron_kingdoms':
+                args[1] += 'Fullname'
+            else:
+                args[1] += 'Names'
+            tmpstr = f'{args[0]}.{args[1]}Generator'
+        if tmpstr in gens:
+            tmpstr = 'pynames.generators.' + tmpstr
+            gen_class = eval(tmpstr)
+        else:
+            print('ERROR: generator not found')
+            return -1
+    return gen_class
+
 class NamesShell(cmd.Cmd):
-    intro = 'Welcome to the names shell.   Type help or ? to list commands.\n'
+    intro = 'Welcome to the names shell.   Type help or ? to list commands.\n (Language support isn`t completed)\n'
     prompt = '(names)> '
     file = None
     gen_lang = 'native'
-    gens = get_all_generators()
-    gens = [g.__module__ + "." + g.__name__ for g in gens]
 
     def do_language(self, arg):
         'Set language'
         arg = shlex.split(arg)
         if len(arg) > 1 or len(arg) < 1:
-            print(f'Too many or too few arguments')
-        elif arg[0] in pynames.LANGUAGE.ALL:
-            self.gen_lang = arg[0]
+            print('ERROR: Too many or too few arguments')
+        elif arg[0].lower() in pynames.LANGUAGE.ALL:
+            self.gen_lang = arg[0].lower()
 
     def do_generate(self, arg):
         'Generate names'
         args = shlex.split(arg)
-
-        gen_class = None
-        if len(args) < 1 or len(args) > 3:
-            print('Incorrect number of the generator arguments')
-            return 0
+        if 'male' in args[-1]:
+            sex = args[-1][0]
+            args = args[:-1]
         else:
-            tmpstr = None
-            if len(args) == 1:
-                if args[0] == 'russian':
-                    tmpstr = f'pynames.generators.{args[0]}.PaganNamesGenerator'
-                else: 
-                    tmpstr = f'pynames.generators.{args[0]}.{args[0].title()}NamesGenerator'
-            elif len(args) > 1:
-                tmpstr = f'pynames.generators.{args[0]}.{args[1]}NamesGenerator'
-            if tmpstr in self.gens:
-                gen_class = eval(tmpstr)
-            else:
-                print('Sorry, generator not found')
-                return 0
-        cur_language = self.gen_lang if self.gen_lang in pynames.LANGUAGE.ALL else 'native'
-        if len(args) == 3 and args[2] == 'male' or len(args) < 3:
-            print(gen_class().get_name_simple(language=cur_language))
-        if len(args) == 3 and args[2] == 'female':
-            print(gen_class().get_name_simple(pynames.GENDER.FEMALE, language=cur_language))
+            sex = 'm'
+
+        gen_class = variants_handle(args)
+        if gen_class == -1:
+            return 0
+        print(gen_class().get_name_simple(sex, language=self.gen_lang))
 
     def do_info(self, arg):
-        return 0
+        'info about generators'
+        args = shlex.split(arg)
+        if 'male' in args[-1]:
+            sex = args[-1][0]
+            args = args[:-1]
+        else:
+            sex = 'both'
+
+        gen_class = variants_handle(args)
+        if gen_class == -1:
+            return 0
+        if sex == 'both':
+            print(gen_class().get_names_number())
+        else:
+            print(gen_class().get_names_number(sex))
 
     def complete_language(self, text: str, state: int) -> list[str] | None:
         return super().complete(text, state)
@@ -80,10 +108,6 @@ class NamesShell(cmd.Cmd):
         if self.file:
             self.file.close()
             self.file = None
-
-def parse(arg):
-    'Convert a series of zero or more numbers to an argument tuple'
-    return tuple(map(int, arg.split()))
 
 
 if __name__ == '__main__':
